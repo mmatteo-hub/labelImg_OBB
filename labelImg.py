@@ -966,7 +966,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.zoomWidget.setValue(value)
 
     def addZoom(self, increment=10):
-        self.setZoom(self.zoomWidget.value() + increment)
+        self.setZoom(int(self.zoomWidget.value()) + increment)
 
     def zoomRequest(self, delta):
         # get the current scrollbar positions
