@@ -100,7 +100,6 @@ class Shape(object):
         if self.points:
             color = self.select_line_color if self.selected else self.line_color
             pen = QPen(color)
-            # Try using integer sizes for smoother drawing(?)
             pen.setWidth(max(1, int(round(2.0 / self.scale))))
             painter.setPen(pen)
 
@@ -109,10 +108,6 @@ class Shape(object):
             originPoint_path = QPainterPath()
 
             line_path.moveTo(self.points[0])
-            # Uncommenting the following line will draw 2 paths
-            # for the 1st vertex, and make it non-filled, which
-            # may be desirable.
-            #self.drawVertex(vrtx_path, 0)
 
             for i, p in enumerate(self.points):
                 line_path.lineTo(p)
@@ -128,12 +123,11 @@ class Shape(object):
             painter.fillPath(vrtx_path, self.vertex_fill_color)
             painter.fillPath(originPoint_path, self.origin_fill_color)
 
-            # Print debug info
             min_x = sys.maxsize
             min_y = sys.maxsize
             for point in self.points:
-                min_x = min(min_x, point.x())
-                min_y = min(min_y, point.y())
+                min_x = min(min_x, int(point.x()))
+                min_y = min(min_y, int(point.y()))
             if min_x != sys.maxsize and min_y != sys.maxsize:
                 font = QFont()
                 font.setPointSize(10)
@@ -145,13 +139,12 @@ class Shape(object):
                     min_y += MIN_Y_LABEL
                 painter.drawText(min_x, min_y, "h={0:.1f}, w={1:.1f} , \u03F4={2:.1f}".format(self.height, self.width, self.angle))
 
-            # Draw text at the top-left
             if self.paintLabel:
                 min_x = sys.maxsize
                 min_y = sys.maxsize
                 for point in self.points:
-                    min_x = min(min_x, point.x())
-                    min_y = min(min_y, point.y())
+                    min_x = min(min_x, int(point.x()))
+                    min_y = min(min_y, int(point.y()))
                 if min_x != sys.maxsize and min_y != sys.maxsize:
                     font = QFont()
                     font.setPointSize(8)
@@ -187,7 +180,7 @@ class Shape(object):
             
     def drawOrigin(self, path):
         d = self.point_size / self.scale
-        path.addEllipse(QPoint(self.origin[0], self.origin[1]), d / 2.0, d / 2.0)
+        path.addEllipse(QPoint(int(self.origin[0]), int(self.origin[1])), d / 2.0, d / 2.0)
 
     def nearestVertex(self, point, epsilon):
         for i, p in enumerate(self.points):
