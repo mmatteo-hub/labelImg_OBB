@@ -23,7 +23,7 @@ class YOLOOBBWriter:
         self.localImgPath = localImgPath
         self.verified = False
 
-    def getYOLOCoordinatesFormat(centre_x, centre_y, height, width, angle, imgSize):
+    def getYOLOCoordinatesFormat(self, centre_x, centre_y, height, width, angle, imgSize):
         # Convert angle to radians
         angle_rad = math.radians(-angle)
 
