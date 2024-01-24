@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
 import sys
+import math
 import os
+import math
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element, SubElement
 from lxml import etree
@@ -21,6 +23,36 @@ class YOLOOBBWriter:
         self.boxlist = []
         self.localImgPath = localImgPath
         self.verified = False
+
+    def getYOLOCoordinatesFormat(centre_x, centre_y, height, width, angle, imgSize):
+        # Convert angle to radians
+        angle_rad = math.radians(-angle)
+
+        # Calculate the coordinates of the bounding box corners rotated by angle
+        rectangle = [
+            [centre_x - height/2 * math.cos(angle_rad) - width/2 * math.sin(angle_rad), centre_y - height/2 * math.sin(angle_rad) + width/2 * math.cos(angle_rad)],
+            [centre_x + height/2 * math.cos(angle_rad) - width/2 * math.sin(angle_rad), centre_y + height/2 * math.sin(angle_rad) + width/2 * math.cos(angle_rad)],
+            [centre_x + height/2 * math.cos(angle_rad) + width/2 * math.sin(angle_rad), centre_y + height/2 * math.sin(angle_rad) - width/2 * math.cos(angle_rad)],
+            [centre_x - height/2 * math.cos(angle_rad) + width/2 * math.sin(angle_rad), centre_y - height/2 * math.sin(angle_rad) - width/2 * math.cos(angle_rad)]
+        ]
+
+        # Extract coordinates
+        x1, y1 = rectangle[0]
+        x2, y2 = rectangle[1]
+        x3, y3 = rectangle[2]
+        x4, y4 = rectangle[3]
+
+        # Normalize coordinates to [0, 1]
+        x1 /= imgSize[1]
+        y1 /= imgSize[0]
+        x2 /= imgSize[1]
+        y2 /= imgSize[0]
+        x3 /= imgSize[1]
+        y3 /= imgSize[0]
+        x4 /= imgSize[1]
+        y4 /= imgSize[0]
+
+        return x1, y1, x2, y2, x3, y3, x4, y4
 
     def addBndBox(self, centre_x, centre_y, height, width, angle, name, difficult):
         bndbox = {'centre_x': centre_x, 'centre_y': centre_y, 'height': height, 'width': width, 'angle': angle}
@@ -44,13 +76,18 @@ class YOLOOBBWriter:
             classesFile = os.path.join(os.path.dirname(os.path.abspath(targetFile)), "classes.txt")
             out_class_file = open(classesFile, 'w')
 
-        out_file.write("YOLO_OBB\n")
+        #out_file.write("YOLO_OBB\n")
         for box in self.boxlist:
             boxName = box['name']
             if boxName not in classList:
                 classList.append(boxName)
             classIndex = classList.index(boxName)
-            out_file.write("%d %.6f %.6f %.6f %.6f %.6f\n" % (classIndex, box['centre_x'], box['centre_y'], box['height'], box['width'], box['angle']))
+            
+            x1, y1, x2, y2, x3, y3, x4, y4 = self.getYOLOCoordinatesFormat(box['centre_x'], box['centre_y'], box['height'], box['width'], box['angle'], self.imgSize)
+
+            out_file.write("%d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n" % (classIndex, x1, y1, x2, y2, x3, y3, x4, y4))
+
+            #out_file.write("%d %.6f %.6f %.6f %.6f %.6f\n" % (classIndex, box['centre_x']/self.imgSize[1], box['centre_y']/self.imgSize[0], box['height']/self.imgSize[1], box['width']/self.imgSize[0], box['angle']))
 
         # print (classList)
         # print (out_class_file)
@@ -98,6 +135,13 @@ class YoloOBBReader:
         return self.shapes
 
     def addShape(self, label, centre_x, centre_y, height, width, angle, difficult):
+        #self.shapes.append((label, float(centre_x), float(centre_y), float(height), float(width), float(angle), None, None, difficult)) # The 2 None's are for shape colors
+        # Normalize the bounding box data
+        centre_x /= self.imgSize[1]
+        centre_y /= self.imgSize[0]
+        height /= self.imgSize[1]
+        width /= self.imgSize[0]
+        # Append the normalized data to self.shapes
         self.shapes.append((label, float(centre_x), float(centre_y), float(height), float(width), float(angle), None, None, difficult)) # The 2 None's are for shape colors
 
     def parseYoloOBBFormat(self):
