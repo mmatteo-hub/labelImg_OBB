@@ -3,6 +3,7 @@
 import sys
 import math
 import os
+import math
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element, SubElement
 from lxml import etree
@@ -75,7 +76,7 @@ class YOLOOBBWriter:
             classesFile = os.path.join(os.path.dirname(os.path.abspath(targetFile)), "classes.txt")
             out_class_file = open(classesFile, 'w')
 
-        #out_file.write("YOLO_OBB\n")
+        out_file.write("YOLO_OBB\n")
         for box in self.boxlist:
             boxName = box['name']
             if boxName not in classList:
@@ -135,19 +136,60 @@ class YoloOBBReader:
 
     def addShape(self, label, centre_x, centre_y, height, width, angle, difficult):
         #self.shapes.append((label, float(centre_x), float(centre_y), float(height), float(width), float(angle), None, None, difficult)) # The 2 None's are for shape colors
-        # Normalize the bounding box data
-        centre_x /= self.imgSize[1]
-        centre_y /= self.imgSize[0]
-        height /= self.imgSize[1]
-        width /= self.imgSize[0]
-        # Append the normalized data to self.shapes
         self.shapes.append((label, float(centre_x), float(centre_y), float(height), float(width), float(angle), None, None, difficult)) # The 2 None's are for shape colors
+
+    def getOriginalCoordinatesFormat(self, x1, y1, x2, y2, x3, y3, x4, y4, imgSize):
+        # Denormalize coordinates to image size
+        x1 *= imgSize[1]
+        y1 *= imgSize[0]
+        x2 *= imgSize[1]
+        y2 *= imgSize[0]
+        x3 *= imgSize[1]
+        y3 *= imgSize[0]
+        x4 *= imgSize[1]
+        y4 *= imgSize[0]
+
+        # Reconstruct the rectangle coordinates
+        rectangle = [
+            [x1, y1],
+            [x2, y2],
+            [x3, y3],
+            [x4, y4]
+        ]
+
+        # Calculate the center, height, width, and angle of the bounding box
+        centre_x = (rectangle[0][0] + rectangle[2][0]) / 2
+        centre_y = (rectangle[0][1] + rectangle[2][1]) / 2
+        height = math.sqrt((rectangle[0][0] - rectangle[1][0])**2 + (rectangle[0][1] - rectangle[1][1])**2)
+        width = math.sqrt((rectangle[1][0] - rectangle[2][0])**2 + (rectangle[1][1] - rectangle[2][1])**2)
+        
+        # Calculate the angle in radians
+        angle_rad = math.atan2(rectangle[1][1] - rectangle[0][1], rectangle[1][0] - rectangle[0][0])
+
+        # Convert angle to degrees
+        angle_deg = math.degrees(-angle_rad)
+
+        return centre_x, centre_y, height, width, angle_deg
 
     def parseYoloOBBFormat(self):
         bndBoxFile = open(self.filepath, 'r')
         next(bndBoxFile) # Skip first line ("YOLO_OBB")
         for bndBox in bndBoxFile:
-            classIndex, centre_x, centre_y, height, width, angle = bndBox.split(' ')
+            #classIndex, centre_x, centre_y, height, width, angle = bndBox.split(' ')
+            classIndex, x1, y1, x2, y2, x3, y3, x4, y4 = bndBox.split(' ')
+
+            # Convert string inputs to float
+            x1 = float(x1)
+            y1 = float(y1)
+            x2 = float(x2)
+            y2 = float(y2)
+            x3 = float(x3)
+            y3 = float(y3)
+            x4 = float(x4)
+            y4 = float(y4)
+
+            centre_x, centre_y, height, width, angle = self.getOriginalCoordinatesFormat(x1, y1, x2, y2, x3, y3, x4, y4, self.imgSize)
+
             label = self.classes[int(classIndex)]
 
             # Caveat: difficult flag is discarded when saved as yolo format.
